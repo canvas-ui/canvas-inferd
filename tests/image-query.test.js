@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import Inferd from '../../../src/services/inferd/src/index.js';
+import Inferd from '../src/index.js';
 
 // embedImageQuery: the query twin of the ingest-side embedImage batch — raw
 // image bytes → one vector in the workspace's image space, for search-by-image.

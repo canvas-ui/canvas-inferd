@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import Inferd from '../../../src/services/inferd/src/index.js';
+import Inferd from '../src/index.js';
 
 const GPU = { gpu: { type: 'openai', baseUrl: 'http://gpu.local:8000/v1' } };
 

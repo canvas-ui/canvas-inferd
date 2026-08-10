@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import OpenAIProvider from '../../../src/services/inferd/src/providers/openai.js';
+import OpenAIProvider from '../src/providers/openai.js';
 
 /**
  * Spin a throwaway OpenAI-compatible endpoint. `handler(body, req)` returns the

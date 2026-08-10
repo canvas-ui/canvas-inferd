@@ -2,8 +2,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkEndpoint, checkConfigEndpoints, endpointFor } from '../../../src/services/inferd/src/endpoint-guard.js';
-import Inferd from '../../../src/services/inferd/src/index.js';
+import { checkEndpoint, checkConfigEndpoints, endpointFor } from '../src/endpoint-guard.js';
+import Inferd from '../src/index.js';
 
 // ── What must be refused ─────────────────────────────────────────────────────
 

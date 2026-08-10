@@ -2,10 +2,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import Router from '../../../src/services/inferd/src/router.js';
-import { chunkText } from '../../../src/services/inferd/src/chunking.js';
-import Queue from '../../../src/services/inferd/src/queue.js';
-import Inferd from '../../../src/services/inferd/src/index.js';
+import Router from '../src/router.js';
+import { chunkText } from '../src/chunking.js';
+import Queue from '../src/queue.js';
+import Inferd from '../src/index.js';
 
 test('router: note schema -> text space, onnx', () => {
     const r = new Router();

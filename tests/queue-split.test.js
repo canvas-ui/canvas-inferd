@@ -2,8 +2,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import Inferd from '../../../src/services/inferd/src/index.js';
-import Semaphore from '../../../src/services/inferd/src/semaphore.js';
+import Inferd from '../src/index.js';
+import Semaphore from '../src/semaphore.js';
 
 // A workspace adapter whose docs are all "gone" (resolveInput → null): the queue
 // runs the full drain path without ever reaching a provider, so these tests

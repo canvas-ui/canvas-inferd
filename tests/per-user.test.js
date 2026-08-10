@@ -2,9 +2,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import Inferd from '../../../src/services/inferd/src/index.js';
-import ProviderPool from '../../../src/services/inferd/src/providers/pool.js';
-import { mergeConfigLayers, redactConfig } from '../../../src/services/inferd/src/config.js';
+import Inferd from '../src/index.js';
+import ProviderPool from '../src/providers/pool.js';
+import { mergeConfigLayers, redactConfig } from '../src/config.js';
 
 const GPU = { gpu: { type: 'openai', baseUrl: 'http://gpu.local:8000/v1' } };
 

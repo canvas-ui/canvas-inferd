@@ -2,10 +2,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, mergeConfigLayers, toMatcher, builtinProviders } from '../../../src/services/inferd/src/config.js';
-import { createProviders } from '../../../src/services/inferd/src/providers/index.js';
-import Router, { DEFAULT_RULES } from '../../../src/services/inferd/src/router.js';
-import Inferd from '../../../src/services/inferd/src/index.js';
+import { normalizeConfig, mergeConfigLayers, toMatcher, builtinProviders } from '../src/config.js';
+import { createProviders } from '../src/providers/index.js';
+import Router, { DEFAULT_RULES } from '../src/router.js';
+import Inferd from '../src/index.js';
 
 // ── Matchers ─────────────────────────────────────────────────────────────────
 

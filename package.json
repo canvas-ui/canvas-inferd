@@ -1,20 +1,25 @@
 {
   "name": "canvas-inferd",
-  "version": "1.0.0",
-  "description": "Unified embedding service: pluggable ONNX + Ollama providers, content-routed, pushes vectors into synapsd",
+  "version": "1.1.0",
+  "description": "Canvas inference service: embeddings today (ONNX/CLIP/Ollama/OpenAI-compatible providers, per-user/workspace config, SSRF endpoint guard), describe/extract capabilities next",
   "main": "./src/index.js",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test \"tests/**/*.test.js\""
   },
   "author": "me@idnc.sk",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
     "debug": "^4.4.3",
-    "fastembed": "^2.1.0"
+    "fastembed": "^2.1.0",
+    "onnxruntime-node": "^1.21.0"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/canvas-ui/canvas-inferd.git"
   }
 }
