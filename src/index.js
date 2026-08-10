@@ -53,29 +53,29 @@ import { COMMENT_CHUNK_ID, SUMMARY_CHUNK_ID, TEXT_SPACE, BASELINE_SPACES, presen
 export default class Inferd {
 
     #baseOptions;              // cache dirs / hosts for the built-in providers
-    #serverConfig;             // admin-set defaults (the embedd.json layer)
+    #serverConfig;             // admin-set defaults (the inferd.json layer)
     #resolveUserConfig;        // async (userId) -> raw per-user config | null
     #pool = new ProviderPool();
     #contexts = new Map();     // userId -> { config, router, providers } (lazy, invalidatable)
     #workspaces = new Map();   // wsId -> adapter
     #wsUser = new Map();       // wsId -> userId (whose defaults the workspace inherits)
-    #wsConfig = new Map();     // wsId -> services.embedd from workspace.json (top layer)
+    #wsConfig = new Map();     // wsId -> services.inferd from workspace.json (top layer)
     #queues = new Map();       // wsId -> Queue  (one per workspace)
     #gate;                     // shared inference concurrency cap
     #batchSize;
     #stopped = false;
     #paused = false;           // global pause (admin control); per-queue pause is separate
-    // Soft ingest gate: CANVAS_EMBEDD_INGEST_DISABLED=true drops enqueues and
+    // Soft ingest gate: CANVAS_INFERD_INGEST_DISABLED=true drops enqueues and
     // no-ops reconcile while queries (embedQuery) keep serving existing
     // vectors. Escape hatch for CPU-bound bulk ingests (the serialized CLIP
     // child pins the whole box); the gap ledger re-drives skipped docs via
-    // reconcile once the gate is lifted. CANVAS_EMBEDD_ENABLED=false remains
+    // reconcile once the gate is lifted. CANVAS_INFERD_ENABLED=false remains
     // the hard switch (no inferd instance at all, dense search degrades).
-    #ingestDisabled = process.env.CANVAS_EMBEDD_INGEST_DISABLED === 'true';
+    #ingestDisabled = process.env.CANVAS_INFERD_INGEST_DISABLED === 'true';
 
     /**
      * @param {object} [options]
-     * @param {object} [options.providers] server-default providers (embedd.json)
+     * @param {object} [options.providers] server-default providers (inferd.json)
      * @param {object} [options.spaces]    server-default per-space backends
      * @param {Array}  [options.rules]     routing rules
      * @param {string} [options.onnxCacheDir]
@@ -86,18 +86,18 @@ export default class Inferd {
      *        per-user overrides. Omitted → every user gets the server config.
      */
     constructor(options = {}) {
-        const { providers, spaces, rules, concurrency, resolveUserConfig, ...base } = options;
+        const { providers, spaces, rules, summarize, concurrency, resolveUserConfig, ...base } = options;
         this.#baseOptions = base;
-        this.#serverConfig = { providers, spaces, rules };
+        this.#serverConfig = { providers, spaces, rules, summarize };
         this.#resolveUserConfig = typeof resolveUserConfig === 'function' ? resolveUserConfig : null;
-        // Validate the server layer eagerly: a broken embedd.json must fail at
+        // Validate the server layer eagerly: a broken inferd.json must fail at
         // boot, not on the first document a user happens to save.
         this.#context(null, [this.#serverConfig], { strict: true });
         // Batched drain: images resolved in one batch share a single provider
         // call (one IPC round-trip + one batched ORT run for up to N images)
         // instead of one call per doc — the dominant ingest cost for photo sets.
-        this.#batchSize = Math.max(1, Number(process.env.CANVAS_EMBED_BATCH) || 8);
-        this.#gate = new Semaphore(concurrency || Number(process.env.CANVAS_EMBEDD_CONCURRENCY) || 1);
+        this.#batchSize = Math.max(1, Number(process.env.CANVAS_INFERD_BATCH) || 8);
+        this.#gate = new Semaphore(concurrency || Number(process.env.CANVAS_INFERD_CONCURRENCY) || 1);
     }
 
     // ── Per-user configuration ────────────────────────────────────────────────
@@ -212,7 +212,12 @@ export default class Inferd {
     setServerConfig(config = {}) {
         const previous = this.#serverConfig;
         const previousContexts = this.#contexts;
-        this.#serverConfig = { providers: config.providers, spaces: config.spaces, rules: config.rules };
+        this.#serverConfig = {
+            providers: config.providers,
+            spaces: config.spaces,
+            rules: config.rules,
+            summarize: config.summarize,
+        };
         this.#contexts = new Map();
         try {
             this.#context(null, [this.#serverConfig], { strict: true });
@@ -300,7 +305,7 @@ export default class Inferd {
      * @param {object} adapter  resolveInput / storeVectors / getUnembedded / …
      * @param {{userId?: string, config?: object}} [opts]
      *   userId — the owner, whose stored defaults this workspace inherits.
-     *   config — `services.embedd` from workspace.json, the TOP layer.
+     *   config — `services.inferd` from workspace.json, the TOP layer.
      */
     registerWorkspace(wsId, adapter, { userId = null, config = null } = {}) {
         if (!wsId || !adapter?.resolveInput || !adapter?.storeVectors) {

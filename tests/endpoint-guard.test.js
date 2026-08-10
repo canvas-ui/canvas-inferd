@@ -151,10 +151,17 @@ test('inferd.validate: checks a candidate without adopting it', async () => {
 });
 
 test('inferd.setServerConfig: adopts a good config and invalidates every user', async () => {
-    const e = new Inferd({ resolveUserConfig: async () => null });
+    const initialSummary = { image: { enabled: true, provider: 'ollama', model: 'qwen2.5vl' } };
+    const e = new Inferd({ summarize: initialSummary, resolveUserConfig: async () => null });
     assert.equal((await e.routerFor('alice')).spaceRule('text').model, 'bge-small-en-v1.5');
-    e.setServerConfig({ spaces: { text: { model: 'new-default', dim: 384 } } });
+    assert.deepEqual((await e.contextFor('alice')).config.summarize, initialSummary);
+    const nextSummary = { image: { enabled: true, provider: 'ollama', model: 'gemma3' } };
+    e.setServerConfig({
+        spaces: { text: { model: 'new-default', dim: 384 } },
+        summarize: nextSummary,
+    });
     assert.equal((await e.routerFor('alice')).spaceRule('text').model, 'new-default', 'users sit on top of the defaults');
+    assert.deepEqual((await e.contextFor('alice')).config.summarize, nextSummary);
     await e.stop();
 });
 

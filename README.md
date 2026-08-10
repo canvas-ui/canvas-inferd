@@ -1,7 +1,6 @@
 # canvas-inferd
 
-The Canvas inference service. Extracted from `canvas-server/src/services/embedd`
-(renamed inferd 2026-08) with full history.
+The Canvas inference service, extracted from Canvas Server with full history.
 
 Inferd produces model output. SynapsD stores vectors and performs candidate
 filtering and ranking. Canvas Server owns the workspace adapter between them.

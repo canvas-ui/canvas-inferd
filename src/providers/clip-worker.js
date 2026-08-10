@@ -41,8 +41,8 @@ const DTYPE = process.env.CANVAS_CLIP_DTYPE || 'fp32';
 // visible cores exceed its quota, spamming errors and thrashing (why more vCPU
 // gave no gain). An explicit count disables the affinity pinning entirely.
 // Bounded default (inferd runs one inference at a time, so a handful of intra-op
-// threads is plenty); override with CANVAS_EMBED_THREADS.
-const THREADS = Math.max(1, Number(process.env.CANVAS_EMBED_THREADS) || Math.min(4, os.cpus().length || 4));
+// threads is plenty); override with CANVAS_INFERD_THREADS.
+const THREADS = Math.max(1, Number(process.env.CANVAS_INFERD_THREADS) || Math.min(4, os.cpus().length || 4));
 const SESSION_OPTIONS = { intraOpNumThreads: THREADS, interOpNumThreads: 1 };
 
 // Dual-tower model classes per architecture family. The family is read from

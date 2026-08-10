@@ -119,7 +119,7 @@ class ModelWorker {
         // reply hangs EVERY subsequent search with nothing in the log. Mirror the
         // CLIP provider: time out, terminate, respawn lazily on the next call.
         // Generous default to cover a cold first-call model load/download.
-        const timeoutMs = Math.max(1000, Number(process.env.CANVAS_EMBED_TIMEOUT_MS) || 120000);
+        const timeoutMs = Math.max(1000, Number(process.env.CANVAS_INFERD_TIMEOUT_MS) || 120000);
         return new Promise((resolve, reject) => {
             const jobId = this.#nextJobId++;
             const timer = setTimeout(() => {

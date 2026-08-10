@@ -1,6 +1,6 @@
 {
   "name": "canvas-inferd",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Canvas inference service: embeddings today (ONNX/CLIP/Ollama/OpenAI-compatible providers, per-user/workspace config, SSRF endpoint guard), describe/extract capabilities next",
   "main": "./src/index.js",
   "type": "module",

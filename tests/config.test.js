@@ -82,19 +82,19 @@ test('normalizeConfig: unknown provider type throws', () => {
     );
 });
 
-test('normalizeConfig: a rule naming an undeclared provider throws (never silently unrouted)', () => {
+test('normalizeConfig: a space naming an undeclared provider throws', () => {
     assert.throws(
         () => normalizeConfig({
-            rules: [{ space: 'text', provider: 'gpu', model: 'm', dim: 384, match: {} }],
+            spaces: { text: { provider: 'gpu', model: 'm', dim: 384 } },
         }),
         /undeclared provider 'gpu'/,
     );
 });
 
-test('normalizeConfig: a rule without a usable dim throws (it sizes the Lance table)', () => {
+test('normalizeConfig: a space without a usable dim throws (it sizes the Lance table)', () => {
     assert.throws(
         () => normalizeConfig({
-            rules: [{ space: 'text', provider: 'onnx', model: 'm', match: {} }],
+            spaces: { text: { provider: 'onnx', model: 'm' } },
         }),
         /positive integer `dim`/,
     );
@@ -108,20 +108,6 @@ test('normalizeConfig: JSON matchers are compiled on the way in', () => {
     });
     const r = new Router({ rules, spaces });
     assert.equal(r.route({ modality: 'image', schema: 'data/schema/file', contentType: 'image/jpeg' }).provider, 'gpu');
-});
-
-test('normalizeConfig: the pre-split shape (provider/model on the rule) still loads', () => {
-    // The first cut shipped provider+model+dim inline on each rule, and that is
-    // what the example config shows. Keep reading it: the first rule to describe
-    // a space defines that space's backend, and the rule keeps its routing half.
-    const { rules, spaces } = normalizeConfig({
-        providers: { gpu: { type: 'openai', baseUrl: 'http://gpu.local:7997' } },
-        rules: [{ space: 'image', provider: 'gpu', model: 'siglip', dim: 768, chunk: false, match: { contentType: 'image/*' } }],
-    });
-    assert.deepEqual(spaces.image, { provider: 'gpu', model: 'siglip', dim: 768, chunk: false });
-    assert.deepEqual(rules, [{ space: 'image', match: { contentType: /^image\// } }]);
-    const r = new Router({ rules, spaces });
-    assert.equal(r.route({ modality: 'image', schema: 'data/schema/file', contentType: 'image/png' }).provider, 'gpu');
 });
 
 test('normalizeConfig: a space override leaves the other spaces on their defaults', () => {
@@ -200,10 +186,9 @@ test('spaceConfigs: ledger keys are always (space, model) with the model as the 
 test('spaceConfigs: a non-baseline model gets its own table AND its own ledger', async () => {
     const e = new Inferd({
         providers: { gpu: { type: 'openai', baseUrl: 'http://gpu.local:8000/v1' } },
-        rules: [{
-            space: 'text', provider: 'gpu', model: 'Qwen/Qwen3-Embedding-0.6B', dim: 1024,
-            chunk: true, match: { schema: 'data/schema/note' },
-        }],
+        spaces: {
+            text: { provider: 'gpu', model: 'Qwen/Qwen3-Embedding-0.6B', dim: 1024, chunk: true },
+        },
     });
     const sc = await e.spaceConfigsFor(null);
     assert.equal(sc.text.model, 'Qwen/Qwen3-Embedding-0.6B');
@@ -219,10 +204,9 @@ test('spaceConfigs: a non-baseline model gets its own table AND its own ledger',
 test('spaceConfigs: same space, same model, different dim is still a new space', async () => {
     // Matryoshka truncation changes the vectors, so it must not reuse the table.
     const e = new Inferd({
-        rules: [{
-            space: 'text', provider: 'onnx', model: 'bge-small-en-v1.5', dim: 256,
-            chunk: true, match: { schema: 'data/schema/note' },
-        }],
+        spaces: {
+            text: { provider: 'onnx', model: 'bge-small-en-v1.5', dim: 256, chunk: true },
+        },
     });
     const sc = await e.spaceConfigsFor(null);
     assert.equal(sc.text.table, undefined);
@@ -235,10 +219,10 @@ test('spaceConfigs: a new modality slots in with no code change', async () => {
     // audio, spatial, whatever comes next.
     const e = new Inferd({
         providers: { gpu: { type: 'openai', baseUrl: 'http://gpu.local:8000/v1' } },
-        rules: [
-            { space: 'text', provider: 'onnx', model: 'bge-small-en-v1.5', dim: 384, chunk: true, match: { schema: 'data/schema/note' } },
-            { space: 'audio', provider: 'gpu', model: 'laion/clap-htsat-unfused', dim: 512, chunk: false, match: { contentType: 'audio/*' } },
-        ],
+        spaces: {
+            audio: { provider: 'gpu', model: 'laion/clap-htsat-unfused', dim: 512, chunk: false },
+        },
+        rules: [{ space: 'audio', match: { contentType: 'audio/*' } }],
     });
     const sc = await e.spaceConfigsFor(null);
     assert.equal(sc.audio.bitmapKey, 'internal/embed/vectors/audio/laion-clap-htsat-unfused');

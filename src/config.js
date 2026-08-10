@@ -129,27 +129,6 @@ function normalizeRule(raw, i) {
 }
 
 /**
- * Split the pre-split config shape, where each rule carried its own
- * provider/model/dim. Kept so a config written against the first cut (and the
- * shipped example) still loads: the first rule to describe a space defines that
- * space's backend, and the rules keep only their routing half.
- */
-function splitLegacyRules(rules) {
-    const derived = {};
-    for (const rule of rules) {
-        if (!rule || typeof rule !== 'object' || !rule.space) { continue; }
-        if (rule.provider === undefined && rule.model === undefined) { continue; }
-        if (derived[rule.space]) { continue; }   // first rule to describe a space wins
-        const cfg = {};
-        for (const key of SPACE_KEYS) {
-            if (rule[key] !== undefined) { cfg[key] = rule[key]; }
-        }
-        derived[rule.space] = cfg;
-    }
-    return derived;
-}
-
-/**
  * Normalize + validate raw config into `{ providers, spaces, rules }`. Defaults
  * reproduce the built-in CPU-local behaviour exactly.
  *
@@ -205,11 +184,9 @@ export function normalizeConfig(options = {}) {
     const providerIds = new Set(Object.keys(providers));
 
     const rawRules = Array.isArray(options.rules) && options.rules.length ? options.rules : DEFAULT_RULES;
-    // Precedence per space: explicit `spaces` > a legacy rule describing it >
-    // the built-in default. Whole-space replacement, not a per-key merge —
-    // declaring a space declares it fully. (Partial per-space overrides are the
-    // resolver's job, which merges the layers before calling in here.)
-    const rawSpaces = { ...DEFAULT_SPACES, ...splitLegacyRules(rawRules), ...(options.spaces || {}) };
+    // Whole-space replacement, not a per-key merge: declaring a space declares
+    // it fully. Partial overrides are merged across layers before normalization.
+    const rawSpaces = { ...DEFAULT_SPACES, ...(options.spaces || {}) };
 
     const spaces = {};
     for (const [space, raw] of Object.entries(rawSpaces)) {
@@ -258,10 +235,7 @@ export function mergeConfigLayers(...layers) {
             out.summarize = out.summarize || {};
             out.summarize[modality] = { ...(out.summarize[modality] || {}), ...spec };
         }
-        // Within a layer, an explicit `spaces` entry beats a backend described
-        // inline on a legacy rule; across layers, later still wins.
-        const layerSpaces = { ...splitLegacyRules(layer.rules || []), ...(layer.spaces || {}) };
-        for (const [space, cfg] of Object.entries(layerSpaces)) {
+        for (const [space, cfg] of Object.entries(layer.spaces || {})) {
             if (!cfg || typeof cfg !== 'object') { continue; }
             out.spaces[space] = { ...(out.spaces[space] || {}), ...cfg };
         }
