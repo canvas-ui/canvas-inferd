@@ -656,6 +656,22 @@ export default class Inferd {
      * Canvas Server owns persistence; inferd only resolves config and runs the
      * selected model.
      */
+    /**
+     * Re-arm the describe provider's crash breaker for a workspace.
+     *
+     * A crashed model worker is not respawned (see BlipProvider), so a run that
+     * died on memory would otherwise stay dead until a server restart. Starting
+     * a new run deliberately is the operator saying they have dealt with it.
+     * Returns true if something was actually re-armed.
+     */
+    async resetDescribeWorkers(wsId) {
+        const ctx = await this.contextForWorkspace(wsId);
+        const spec = ctx.config.summarize?.image;
+        const provider = spec ? ctx.providers.get(spec.provider) : null;
+        if (!provider || typeof provider.resetWorkers !== 'function') { return false; }
+        return provider.resetWorkers(spec.model || null);
+    }
+
     async describeImage(wsId, bytes, { contentType = null } = {}) {
         if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
             throw new Error('inferd.describeImage requires image bytes');

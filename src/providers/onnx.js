@@ -93,6 +93,13 @@ class ModelWorker {
 
             this.#worker.on('exit', (code) => {
                 debug(`ONNX worker exited (code ${code})`);
+                // A worker THREAD shares the process, so it cannot be OOM-killed
+                // on its own — a non-zero exit means it died on its own error.
+                // Still worth saying out loud when jobs were riding on it, since
+                // the callers only ever see their own rejection.
+                if (code !== 0 && this.#pending.size > 0) {
+                    console.error(`inferd: ONNX worker died (code ${code}); ${this.#pending.size} in-flight embed(s) failed`);
+                }
                 const err = new Error(`ONNX worker exited (code ${code})`);
                 for (const [, entry] of this.#pending) { entry.reject(err); }
                 this.#pending.clear();
