@@ -1,6 +1,7 @@
 'use strict';
 
 import { DEFAULT_RULES, DEFAULT_SPACES } from './router.js';
+import { CAPTION_TASKS as CAPTION_TASK_NAMES } from './providers/caption-task.js';
 
 /**
  * inferd configuration — providers, per-space backends and routing as DATA.
@@ -146,6 +147,9 @@ function normalizeRule(raw, i) {
 // a workspace explicitly enables image summaries.
 // Shape: { summarize: { image: { enabled, provider?, model? }, audio: {...} } }
 const SUMMARIZE_MODALITIES = new Set(['image', 'audio', 'text']);
+// How a caption model is DRIVEN — a property of the model family, not of the
+// provider. Defined next to the worker that implements each one.
+const CAPTION_TASKS = new Set(CAPTION_TASK_NAMES);
 const DEFAULT_SUMMARIZE = {
     image: { enabled: false, provider: 'blip', model: 'Xenova/vit-gpt2-image-captioning' },
 };
@@ -173,6 +177,24 @@ function normalizeSummarize(raw, providerIds) {
                 throw new Error(`inferd config: summarize.${modality}.model must be a non-empty string`);
             }
             entry.model = spec.model;
+        }
+        // Which FAMILY the model belongs to, because the runner differs: a plain
+        // captioner takes an image and nothing else, an instruct VLM takes an
+        // image plus a prompt, and Florence-2 takes an image plus a task token.
+        // Left unset it is inferred from the model id (see resolveCaptionTask).
+        if (spec.task !== undefined) {
+            if (!CAPTION_TASKS.has(spec.task)) {
+                throw new Error(`inferd config: summarize.${modality}.task must be one of ${[...CAPTION_TASKS].join(', ')}`);
+            }
+            entry.task = spec.task;
+        }
+        // Only instruct VLMs can be steered ("describe the architecture…"); a
+        // plain captioner ignores it, which is why it is not an error to set.
+        if (spec.prompt !== undefined) {
+            if (typeof spec.prompt !== 'string') {
+                throw new Error(`inferd config: summarize.${modality}.prompt must be a string`);
+            }
+            entry.prompt = spec.prompt;
         }
         if (entry.enabled && (!entry.provider || !entry.model)) {
             throw new Error(`inferd config: summarize.${modality} is enabled but missing provider/model`);

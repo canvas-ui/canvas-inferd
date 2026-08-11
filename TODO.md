@@ -26,6 +26,20 @@ Interaction to keep in mind: eviction must not look like a crash. The crash
 breaker (see below) keys off UNEXPECTED exits, so an evicting stop has to mark
 `entry.expected = true` the way `stop()` and the timeout kill already do.
 
+### Captioning quality
+The BLIP ONNX repos are all 401/gated on the Hub, so the local family plumbing
+(`summarize.image.task`: caption | instruct | florence2) exists in their place.
+Verified available 2026-08-11: SmolVLM-256M/500M-Instruct, Florence-2-base/large-ft,
+vit-gpt2. Gone: every `Xenova/blip-*`, `onnx-community/moondream2`.
+
+Not yet done, and the better answer per the direction above: **`describeImage`
+on a remote provider.** `ollama` (llava, qwen2.5vl) and `openai` (any
+OpenAI-compatible vision endpoint) both declare the provider contract but
+neither implements `describeImage` — only `blip` does. A remote VLM would
+caption better than anything that fits on a small box, and takes the model out
+of the server's memory entirely, which is what caused the OOM in the first
+place.
+
 ### Follow-ups from the OOM incident (2026-08-11)
 - Breaker is per-model and re-arms on an explicit new run
   (`resetDescribeWorkers`) or provider stop. Consider surfacing "stopped, why"

@@ -683,7 +683,14 @@ export default class Inferd {
         if (!provider || typeof provider.describeImage !== 'function') {
             throw new Error(`provider '${spec.provider}' does not support image descriptions`);
         }
-        const text = await provider.describeImage(bytes, { model: spec.model, contentType });
+        const text = await provider.describeImage(bytes, {
+            model: spec.model,
+            // Family + steering prompt travel with the call; a plain captioner
+            // ignores the prompt, an instruct VLM is shaped by it.
+            task: spec.task || null,
+            prompt: spec.prompt || null,
+            contentType,
+        });
         if (typeof text !== 'string' || !text.trim()) { throw new Error('image description was empty'); }
         return text.trim();
     }

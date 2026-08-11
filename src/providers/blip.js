@@ -43,7 +43,7 @@ export default class BlipProvider {
         catch (_) { return null; }
     }
 
-    #worker(model) {
+    #worker(model, task = null) {
         const existing = this.#workers.get(model);
         if (existing) { return existing; }
 
@@ -53,6 +53,9 @@ export default class BlipProvider {
         const env = { ...process.env, CANVAS_BLIP_MODEL: model };
         if (this.#cacheDir) { env.CANVAS_BLIP_CACHE = this.#cacheDir; }
         if (this.#dtype) { env.CANVAS_BLIP_DTYPE = this.#dtype; }
+        // The family latches per worker: it decides which pipeline gets built,
+        // so it cannot vary per request against one loaded model.
+        if (task) { env.CANVAS_BLIP_TASK = task; }
         const child = fork(WORKER_PATH, [], { env, serialization: 'advanced' });
         // `expected` marks OUR OWN teardown (stop, timeout kill) so those exits
         // stay quiet and anything else is reported as the failure it is.
@@ -94,12 +97,12 @@ export default class BlipProvider {
         return entry;
     }
 
-    async describeImage(buffer, { model } = {}) {
+    async describeImage(buffer, { model, task = null, prompt = null } = {}) {
         if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) {
             throw new Error('BlipProvider.describeImage requires image bytes');
         }
         const resolved = this.#resolveModel(model);
-        const worker = this.#worker(resolved);
+        const worker = this.#worker(resolved, task);
         const id = this.#seq++;
         const cold = this.modelCached(resolved) === false;
         const timeoutMs = Math.max(1000, Number(process.env.CANVAS_BLIP_TIMEOUT_MS) || (cold ? 600000 : 120000));
@@ -117,7 +120,7 @@ export default class BlipProvider {
                 resolve: (text) => { clearTimeout(timer); resolve(text); },
                 reject: (error) => { clearTimeout(timer); reject(error); },
             });
-            worker.child.send({ id, buffer });
+            worker.child.send({ id, buffer, prompt });
         });
     }
 
