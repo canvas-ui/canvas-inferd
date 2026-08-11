@@ -651,6 +651,27 @@ export default class Inferd {
         return vectors?.[0] || null;
     }
 
+    /**
+     * Generate a textual description without touching workspace storage.
+     * Canvas Server owns persistence; inferd only resolves config and runs the
+     * selected model.
+     */
+    async describeImage(wsId, bytes, { contentType = null } = {}) {
+        if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
+            throw new Error('inferd.describeImage requires image bytes');
+        }
+        const ctx = await this.contextForWorkspace(wsId);
+        const spec = ctx.config.summarize?.image;
+        if (!spec?.enabled) { throw new Error('image summaries are disabled'); }
+        const provider = ctx.providers.get(spec.provider);
+        if (!provider || typeof provider.describeImage !== 'function') {
+            throw new Error(`provider '${spec.provider}' does not support image descriptions`);
+        }
+        const text = await provider.describeImage(bytes, { model: spec.model, contentType });
+        if (typeof text !== 'string' || !text.trim()) { throw new Error('image description was empty'); }
+        return text.trim();
+    }
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     /**

@@ -8,7 +8,7 @@ import { DEFAULT_RULES, DEFAULT_SPACES } from './router.js';
  * Three parts, deliberately separated by who owns them:
  *
  *   providers{} — connection details for an inference backend (`{ type, ...opts }`
- *                 under a caller-chosen id). Built-ins `onnx`/`ollama`/`clip`
+ *                 under a caller-chosen id). Built-ins `onnx`/`ollama`/`clip`/`blip`
  *                 always exist; re-declaring an id merges over its options.
  *   spaces{}    — which provider+model fills each modality. THE configurable
  *                 surface: server defaults, overridable per user.
@@ -32,7 +32,7 @@ import { DEFAULT_RULES, DEFAULT_SPACES } from './router.js';
  */
 
 /** Provider implementations the factory knows how to build. */
-export const PROVIDER_TYPES = new Set(['onnx', 'ollama', 'clip', 'openai']);
+export const PROVIDER_TYPES = new Set(['onnx', 'ollama', 'clip', 'blip', 'openai']);
 
 /** Keys that describe a space's BACKEND rather than its routing. */
 const SPACE_KEYS = ['provider', 'model', 'dim', 'chunk', 'maxLength', 'dimensions', 'annIndex'];
@@ -47,6 +47,7 @@ export function builtinProviders({ onnxCacheDir = null, clipCacheDir = null, oll
         onnx: { type: 'onnx', cacheDir: onnxCacheDir },
         ollama: { type: 'ollama', host: ollamaHost },
         clip: { type: 'clip', cacheDir: clipCacheDir || onnxCacheDir },
+        blip: { type: 'blip', cacheDir: clipCacheDir || onnxCacheDir },
     };
 }
 
@@ -141,11 +142,13 @@ function normalizeRule(raw, i) {
  * @param {string} [options.ollamaHost]
  */
 // Per-modality summary generation ("describe" capability — captions for images
-// first, audio/text later). Config-only for now: the block is validated and
-// persisted through every layer so the UI can already expose the controls; the
-// captioner loop that CONSUMES it ships with the qwen-vl provider work.
+// first, audio/text later). BLIP is the local optional default: disabled until
+// a workspace explicitly enables image summaries.
 // Shape: { summarize: { image: { enabled, provider?, model? }, audio: {...} } }
 const SUMMARIZE_MODALITIES = new Set(['image', 'audio', 'text']);
+const DEFAULT_SUMMARIZE = {
+    image: { enabled: false, provider: 'blip', model: 'Xenova/blip-image-captioning-base' },
+};
 
 function normalizeSummarize(raw, providerIds) {
     if (raw === undefined || raw === null) { return {}; }
@@ -201,7 +204,15 @@ export function normalizeConfig(options = {}) {
         }
     }
 
-    return { providers, spaces, rules, summarize: normalizeSummarize(options.summarize, providerIds) };
+    const rawSummarize = options.summarize;
+    if (rawSummarize != null && (typeof rawSummarize !== 'object' || Array.isArray(rawSummarize))) {
+        normalizeSummarize(rawSummarize, providerIds);
+    }
+    const summarize = {};
+    for (const modality of new Set([...Object.keys(DEFAULT_SUMMARIZE), ...Object.keys(rawSummarize || {})])) {
+        summarize[modality] = { ...(DEFAULT_SUMMARIZE[modality] || {}), ...(rawSummarize?.[modality] || {}) };
+    }
+    return { providers, spaces, rules, summarize: normalizeSummarize(summarize, providerIds) };
 }
 
 /**

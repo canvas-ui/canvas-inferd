@@ -38,7 +38,7 @@ test('toMatcher: a RegExp passes through untouched', () => {
 
 test('normalizeConfig: no config reproduces the built-in providers + DEFAULT_RULES', () => {
     const { providers, rules } = normalizeConfig();
-    assert.deepEqual(Object.keys(providers).sort(), ['clip', 'ollama', 'onnx']);
+    assert.deepEqual(Object.keys(providers).sort(), ['blip', 'clip', 'ollama', 'onnx']);
     assert.equal(providers.onnx.type, 'onnx');
     assert.equal(rules.length, DEFAULT_RULES.length);
     // Routing is unchanged, which is the point: adding config must not move
@@ -52,6 +52,7 @@ test('builtinProviders: server settings feed the built-ins (clip falls back to t
     const p = builtinProviders({ onnxCacheDir: '/srv/models', ollamaHost: 'http://gpu:11434' });
     assert.equal(p.onnx.cacheDir, '/srv/models');
     assert.equal(p.clip.cacheDir, '/srv/models');
+    assert.equal(p.blip.cacheDir, '/srv/models');
     assert.equal(p.ollama.host, 'http://gpu:11434');
 });
 
@@ -134,7 +135,7 @@ test('createProviders: builds one instance per declared id, id-tagged', () => {
         providers: { gpu: { type: 'openai', baseUrl: 'http://gpu.local:8000/v1' } },
     });
     const map = createProviders(providers);
-    assert.deepEqual([...map.keys()].sort(), ['clip', 'gpu', 'ollama', 'onnx']);
+    assert.deepEqual([...map.keys()].sort(), ['blip', 'clip', 'gpu', 'ollama', 'onnx']);
     assert.equal(map.get('gpu').id, 'gpu');
     assert.equal(map.get('onnx').id, 'onnx');
 });
@@ -243,7 +244,11 @@ test('summarize: normalizes, validates provider refs, merges key-wise per modali
     // Unknown modality / unknown provider / enabled-without-model all throw.
     assert.throws(() => normalizeConfig({ summarize: { video: {} } }), /unknown modality/);
     assert.throws(() => normalizeConfig({ summarize: { image: { enabled: true, provider: 'nope', model: 'x' } } }), /unknown provider/);
-    assert.throws(() => normalizeConfig({ summarize: { image: { enabled: true } } }), /missing provider\/model/);
+    // enabled:true alone inherits the optional BLIP default provider/model.
+    assert.deepEqual(
+        normalizeConfig({ summarize: { image: { enabled: true } } }).summarize.image,
+        { enabled: true, provider: 'blip', model: 'Xenova/blip-image-captioning-base' },
+    );
 
     // Layer merge: workspace flips only `enabled`, inherits provider/model.
     const merged = mergeConfigLayers(
@@ -252,6 +257,8 @@ test('summarize: normalizes, validates provider refs, merges key-wise per modali
     );
     assert.deepEqual(merged.summarize.image, { provider: 'vlm', model: 'qwen2.5vl', enabled: true });
 
-    // Absent block normalizes to {} and older configs stay valid.
-    assert.deepEqual(normalizeConfig({}).summarize, {});
+    // Absent block still exposes the optional BLIP image default (disabled).
+    assert.deepEqual(normalizeConfig({}).summarize, {
+        image: { enabled: false, provider: 'blip', model: 'Xenova/blip-image-captioning-base' },
+    });
 });

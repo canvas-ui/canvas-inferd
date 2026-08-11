@@ -132,9 +132,13 @@ test('guard: endpointFor names the field each provider type fetches', () => {
     assert.equal(endpointFor({ type: 'ollama' }), null);
 });
 
-test('guard: providers with no URL (onnx/clip) are not checked', async () => {
+test('guard: providers with no URL (onnx/clip/blip) are not checked', async () => {
     const problems = await checkConfigEndpoints({
-        providers: { onnx: { type: 'onnx', cacheDir: null }, clip: { type: 'clip', cacheDir: null } },
+        providers: {
+            onnx: { type: 'onnx', cacheDir: null },
+            clip: { type: 'clip', cacheDir: null },
+            blip: { type: 'blip', cacheDir: null },
+        },
     });
     assert.deepEqual(problems, []);
 });

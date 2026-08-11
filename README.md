@@ -18,6 +18,10 @@ Raw media and model runtimes never enter SynapsD.
 - Durable reconciliation through SynapsD's model-keyed `seen` and `vectors`
   bitmap ledgers.
 - Ephemeral text and image query embeddings. Query inputs are never indexed.
+- Optional image captions via a forked BLIP worker
+  (`Xenova/blip-image-captioning-base`, Transformers.js ONNX). Disabled until
+  `summarize.image.enabled` is set; `describeImage(wsId, bytes)` returns text
+  only — Canvas Server persists `metadata.summary`.
 
 The built-in spaces are:
 
@@ -32,11 +36,12 @@ Providers implement:
 embedText(texts, rule)
 embedQuery(text, rule)
 embedImage(images, rule, metadata)
+describeImage(bytes, options)   // caption providers only (blip)
 status()
 stop()
 ```
 
-`embedImage` may reject unsupported providers.
+`embedImage` / `describeImage` may reject unsupported providers.
 
 ## Workspace adapter
 
@@ -62,15 +67,15 @@ The public query-side methods are:
 
 - `embedQueryForWorkspace(workspaceId, text, space)`
 - `embedImageQuery(workspaceId, bytes, contentType, space)`
+- `describeImage(workspaceId, bytes)`
 
 SynapsD receives their vectors through Canvas Server's typed match descriptor
 and ranks only documents which survived structural filtering.
 
 ## Planned capabilities
 
-- `describe`: captions, summaries, and transcripts. Generated text is written
-  to `metadata.summary`; SynapsD already indexes that field for FTS and as the
-  reserved text chunk `-2`.
+- Broader `describe`: audio transcripts and long-text abstracts (image captions
+  already ship). Server still owns writing `metadata.summary`.
 - `extract`: model hidden states and projected semantic anchors.
 - Priority scheduling before live streams become a caller: interactive work,
   background derivation, then bulk reconciliation.

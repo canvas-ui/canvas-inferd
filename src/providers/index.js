@@ -3,6 +3,7 @@
 import OnnxProvider from './onnx.js';
 import OllamaProvider from './ollama.js';
 import ClipProvider from './clip.js';
+import BlipProvider from './blip.js';
 import OpenAIProvider from './openai.js';
 
 /**
@@ -14,12 +15,14 @@ import OpenAIProvider from './openai.js';
  *   embedText(texts, rule)          → { vectors, dim }
  *   embedQuery(text, rule)          → { vector,  dim }
  *   embedImage(images, rule, meta)  → { vectors, dim }   (may throw: unsupported)
+ *   describeImage(bytes, options)   → string              (may throw: unsupported)
  *   status() / stop()
  */
 const FACTORIES = {
     onnx: (id, o) => new OnnxProvider({ ...o, id }),
     ollama: (id, o) => new OllamaProvider({ ...o, id }),
     clip: (id, o) => new ClipProvider({ ...o, id }),
+    blip: (id, o) => new BlipProvider({ ...o, id }),
     openai: (id, o) => new OpenAIProvider({ ...o, id }),
 };
 

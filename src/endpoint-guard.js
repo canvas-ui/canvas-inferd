@@ -135,7 +135,7 @@ export function endpointFor(spec) {
  * blocks a legitimate config for no security gain. Switching the type
  * re-validates, so the now-live field is still checked before it is ever used.
  *
- * Local provider types (onnx, clip) have no URL at all.
+ * Local provider types (onnx, clip, blip) have no URL at all.
  */
 export async function checkConfigEndpoints(config, policy = {}) {
     const problems = [];
