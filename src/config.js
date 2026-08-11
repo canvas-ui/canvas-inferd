@@ -147,7 +147,7 @@ function normalizeRule(raw, i) {
 // Shape: { summarize: { image: { enabled, provider?, model? }, audio: {...} } }
 const SUMMARIZE_MODALITIES = new Set(['image', 'audio', 'text']);
 const DEFAULT_SUMMARIZE = {
-    image: { enabled: false, provider: 'blip', model: 'Xenova/blip-image-captioning-base' },
+    image: { enabled: false, provider: 'blip', model: 'Xenova/vit-gpt2-image-captioning' },
 };
 
 function normalizeSummarize(raw, providerIds) {

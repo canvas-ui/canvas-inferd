@@ -244,10 +244,10 @@ test('summarize: normalizes, validates provider refs, merges key-wise per modali
     // Unknown modality / unknown provider / enabled-without-model all throw.
     assert.throws(() => normalizeConfig({ summarize: { video: {} } }), /unknown modality/);
     assert.throws(() => normalizeConfig({ summarize: { image: { enabled: true, provider: 'nope', model: 'x' } } }), /unknown provider/);
-    // enabled:true alone inherits the optional BLIP default provider/model.
+    // enabled:true alone inherits the optional local caption default.
     assert.deepEqual(
         normalizeConfig({ summarize: { image: { enabled: true } } }).summarize.image,
-        { enabled: true, provider: 'blip', model: 'Xenova/blip-image-captioning-base' },
+        { enabled: true, provider: 'blip', model: 'Xenova/vit-gpt2-image-captioning' },
     );
 
     // Layer merge: workspace flips only `enabled`, inherits provider/model.
@@ -257,8 +257,8 @@ test('summarize: normalizes, validates provider refs, merges key-wise per modali
     );
     assert.deepEqual(merged.summarize.image, { provider: 'vlm', model: 'qwen2.5vl', enabled: true });
 
-    // Absent block still exposes the optional BLIP image default (disabled).
+    // Absent block still exposes the optional local caption default (disabled).
     assert.deepEqual(normalizeConfig({}).summarize, {
-        image: { enabled: false, provider: 'blip', model: 'Xenova/blip-image-captioning-base' },
+        image: { enabled: false, provider: 'blip', model: 'Xenova/vit-gpt2-image-captioning' },
     });
 });

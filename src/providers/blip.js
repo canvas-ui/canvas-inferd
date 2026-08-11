@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const WORKER_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'blip-worker.js');
-const DEFAULT_MODEL = 'Xenova/blip-image-captioning-base';
+const DEFAULT_MODEL = 'Xenova/vit-gpt2-image-captioning';
 
 export default class BlipProvider {
     id = 'blip';

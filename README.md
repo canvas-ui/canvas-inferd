@@ -18,8 +18,8 @@ Raw media and model runtimes never enter SynapsD.
 - Durable reconciliation through SynapsD's model-keyed `seen` and `vectors`
   bitmap ledgers.
 - Ephemeral text and image query embeddings. Query inputs are never indexed.
-- Optional image captions via a forked BLIP worker
-  (`Xenova/blip-image-captioning-base`, Transformers.js ONNX). Disabled until
+- Optional image captions via a forked Transformers.js worker (`blip` provider,
+  default `Xenova/vit-gpt2-image-captioning`). Disabled until
   `summarize.image.enabled` is set; `describeImage(wsId, bytes)` returns text
   only — Canvas Server persists `metadata.summary`.
 
