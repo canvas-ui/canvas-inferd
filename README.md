@@ -21,7 +21,13 @@ Raw media and model runtimes never enter SynapsD.
 - Optional image captions via a forked Transformers.js worker (`blip` provider,
   default `Xenova/vit-gpt2-image-captioning`). Disabled until
   `summarize.image.enabled` is set; `describeImage(wsId, bytes)` returns text
-  only — Canvas Server persists `metadata.summary`.
+  only — Canvas Server persists `metadata.summary`. `summarize.image.task`
+  (`caption` | `instruct` | `florence2`) selects how the worker drives the
+  model, inferred from the model id when unset.
+- A per-model crash breaker on the forked BLIP/CLIP workers: an unexpected
+  worker exit fails the run instead of respawning per document, stays tripped
+  until `resetDescribeWorkers()` or provider stop, and breaker-stopped models
+  are reported by the provider's `status()`.
 
 The built-in spaces are:
 

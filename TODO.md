@@ -51,3 +51,51 @@ place.
 - `worker-exit.js` centralises exit reporting for the forked providers. ONNX
   runs a worker THREAD (dies with the process, cannot be OOM-killed alone) and
   is deliberately not on the breaker.
+
+### Scheduling & workers (moved from canvas/TODO.md)
+- [ ] Add priority scheduling: interactive queries and live streams before
+      background derivation, then bulk reconciliation.
+- [ ] Support parallel workers where the selected runtime can actually run in
+      parallel. Keep the server-wide resource cap and per-workspace isolation.
+      (Overlaps the configurable resident-worker cap above.)
+
+### Semantic anchors research (moved from canvas/TODO.md)
+- [ ] Establish the baseline with existing contrastively trained CLIP/SigLIP
+      vectors before touching Gemma hidden states.
+- [ ] Train a versioned per-model codebook and emit small anchor observations.
+      Implementation notes (distilled from _SCRATCH_/TODO.multimodal.md):
+      - Background loop shaped like the embed reconcile: walk synapsd's
+        unanchored ledger → fetch EXISTING SigLIP/text vectors from Lance (no
+        re-inference for already-embedded docs) → hierarchical k-means or
+        product quantization → `storeDocumentAnchors`.
+      - Codebook is a per-`<space>/<modelSlug>` versioned artifact; retrain =
+        new space, old space queryable throughout, prefix-swap at 100% (same
+        zero-downtime migration UX as embedding-model switches).
+- [ ] Evaluate anchor retrieval against exact vector kNN on the same corpus.
+      Measure recall, stability across frames, rebuild cost, and model changes.
+      (Search-by-image gives the kNN baseline to measure against.)
+- [ ] Experiment with Gemma 4 per-layer representations: layer selection,
+      modality/token pooling, normalization, and whether a shared codebook
+      preserves cross-modal alignment. Runtime candidates: llama.cpp (mmproj
+      vision) via node-llama-cpp, onnxruntime-node. Open: whether per-workspace
+      codebook alignment rescues non-contrastive hidden states. Wilder research:
+      low-dimensional attractor / toroidal target manifolds (grid-cell style)
+      instead of the S2 sphere.
+- [ ] Benchmark a cheap SigLIP/CLIP text bridge against caption-then-embed before
+      making captions mandatory for cross-modal retrieval. (The bridge: at
+      ingest, embed each note's title/snippet through SigLIP's TEXT encoder into
+      the image space as a second presence (~64-token limit) — image-query kNN
+      then hits notes directly, no VLM needed.)
+
+### Multimodal follow-ups (distilled from _SCRATCH_/TODO.multimodal.md)
+- [ ] Audio: CLAP (or similar) joint audio space as a new `<space>/<modelSlug>`,
+      same pattern as the SigLIP image space.
+- [ ] Summaries as QUERY ANCHORS (user note 2026-08-10): generated summaries fed
+      into the db not only as indexed fields but as query-side legs/anchors.
+      Ties into the codebook + describe capability; parked until the captioner
+      settles.
+- [ ] Retire the wire-compat aliases now that the webui is on `/inferd`:
+      alias-then-rename `/rest/v2/embedd` + `/workspaces/:id/embedd` (aliases
+      live in canvas-server), `CANVAS_EMBEDD_*` env vars, `config/embedd.json`,
+      `workspace.json services.embedd`, ConfigStore name, `<home>/embedd/models`
+      cache dir.
