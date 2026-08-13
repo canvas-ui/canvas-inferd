@@ -94,8 +94,3 @@ place.
       into the db not only as indexed fields but as query-side legs/anchors.
       Ties into the codebook + describe capability; parked until the captioner
       settles.
-- [ ] Retire the wire-compat aliases now that the webui is on `/inferd`:
-      alias-then-rename `/rest/v2/embedd` + `/workspaces/:id/embedd` (aliases
-      live in canvas-server), `CANVAS_EMBEDD_*` env vars, `config/embedd.json`,
-      `workspace.json services.embedd`, ConfigStore name, `<home>/embedd/models`
-      cache dir.
