@@ -40,12 +40,19 @@ describe('summarize config', () => {
         );
     });
 
-    test('the default stays the old captioner — changing it is a deliberate act', () => {
-        // Silently re-pointing existing installs at a different model would
-        // re-caption nothing but change every future caption.
+    test('the default captioner is SmolVLM-500M-Instruct, still disabled', () => {
+        // Changed deliberately: vit-gpt2 produced one terse, repetition-prone
+        // sentence. The blast radius is small because the default is DISABLED —
+        // anyone actually captioning saved a config, and the UI always writes
+        // provider/model/task explicitly. Only a hand-written config that sets
+        // nothing but `enabled: true` inherits the new model.
         const config = normalizeConfig({});
-        assert.equal(config.summarize.image.model, 'Xenova/vit-gpt2-image-captioning');
+        assert.equal(config.summarize.image.model, 'HuggingFaceTB/SmolVLM-500M-Instruct');
         assert.equal(config.summarize.image.enabled, false);
+        // No sticky task/prompt: they must stay inferable so overriding the
+        // model alone doesn't drag an instruct pipeline onto a plain captioner.
+        assert.equal(config.summarize.image.task, undefined);
+        assert.equal(resolveCaptionTask(config.summarize.image.model), 'instruct');
     });
 });
 

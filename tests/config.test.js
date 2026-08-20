@@ -38,7 +38,7 @@ test('toMatcher: a RegExp passes through untouched', () => {
 
 test('normalizeConfig: no config reproduces the built-in providers + DEFAULT_RULES', () => {
     const { providers, rules } = normalizeConfig();
-    assert.deepEqual(Object.keys(providers).sort(), ['blip', 'clip', 'ollama', 'onnx']);
+    assert.deepEqual(Object.keys(providers).sort(), ['blip', 'clip', 'ollama', 'onnx', 'vllm']);
     assert.equal(providers.onnx.type, 'onnx');
     assert.equal(rules.length, DEFAULT_RULES.length);
     // Routing is unchanged, which is the point: adding config must not move
@@ -53,7 +53,12 @@ test('builtinProviders: server settings feed the built-ins (clip falls back to t
     assert.equal(p.onnx.cacheDir, '/srv/models');
     assert.equal(p.clip.cacheDir, '/srv/models');
     assert.equal(p.blip.cacheDir, '/srv/models');
-    assert.equal(p.ollama.host, 'http://gpu:11434');
+    // ollama/vllm are OpenAI-compatible presets, so the server setting lands on
+    // `baseUrl` — OpenAIProvider appends /v1 to a bare host.
+    assert.equal(p.ollama.type, 'openai');
+    assert.equal(p.ollama.baseUrl, 'http://gpu:11434');
+    assert.equal(p.vllm.type, 'openai');
+    assert.equal(p.vllm.baseUrl, 'http://127.0.0.1:8000/v1');
 });
 
 // ── Declared providers ───────────────────────────────────────────────────────
@@ -70,10 +75,10 @@ test('normalizeConfig: declaring a provider adds it alongside the built-ins', ()
 test('normalizeConfig: re-declaring a built-in merges over its defaults', () => {
     const { providers } = normalizeConfig({
         onnxCacheDir: '/srv/models',
-        providers: { ollama: { host: 'http://gpu.local:11434' } },
+        providers: { ollama: { baseUrl: 'http://gpu.local:11434/v1' } },
     });
-    assert.equal(providers.ollama.type, 'ollama', 'type is inherited, not required again');
-    assert.equal(providers.ollama.host, 'http://gpu.local:11434');
+    assert.equal(providers.ollama.type, 'openai', 'type is inherited, not required again');
+    assert.equal(providers.ollama.baseUrl, 'http://gpu.local:11434/v1');
 });
 
 test('normalizeConfig: unknown provider type throws', () => {
@@ -135,7 +140,7 @@ test('createProviders: builds one instance per declared id, id-tagged', () => {
         providers: { gpu: { type: 'openai', baseUrl: 'http://gpu.local:8000/v1' } },
     });
     const map = createProviders(providers);
-    assert.deepEqual([...map.keys()].sort(), ['blip', 'clip', 'gpu', 'ollama', 'onnx']);
+    assert.deepEqual([...map.keys()].sort(), ['blip', 'clip', 'gpu', 'ollama', 'onnx', 'vllm']);
     assert.equal(map.get('gpu').id, 'gpu');
     assert.equal(map.get('onnx').id, 'onnx');
 });
@@ -236,7 +241,7 @@ test('spaceConfigs: a new modality slots in with no code change', async () => {
 
 test('summarize: normalizes, validates provider refs, merges key-wise per modality', () => {
     const { summarize } = normalizeConfig({
-        providers: { vlm: { type: 'ollama', host: 'http://gpu:11434' } },
+        providers: { vlm: { type: 'openai', baseUrl: 'http://gpu:11434/v1' } },
         summarize: { image: { enabled: true, provider: 'vlm', model: 'qwen2.5vl' } },
     });
     assert.deepEqual(summarize.image, { enabled: true, provider: 'vlm', model: 'qwen2.5vl' });
@@ -247,7 +252,7 @@ test('summarize: normalizes, validates provider refs, merges key-wise per modali
     // enabled:true alone inherits the optional local caption default.
     assert.deepEqual(
         normalizeConfig({ summarize: { image: { enabled: true } } }).summarize.image,
-        { enabled: true, provider: 'blip', model: 'Xenova/vit-gpt2-image-captioning' },
+        { enabled: true, provider: 'blip', model: 'HuggingFaceTB/SmolVLM-500M-Instruct' },
     );
 
     // Layer merge: workspace flips only `enabled`, inherits provider/model.
@@ -259,6 +264,6 @@ test('summarize: normalizes, validates provider refs, merges key-wise per modali
 
     // Absent block still exposes the optional local caption default (disabled).
     assert.deepEqual(normalizeConfig({}).summarize, {
-        image: { enabled: false, provider: 'blip', model: 'Xenova/vit-gpt2-image-captioning' },
+        image: { enabled: false, provider: 'blip', model: 'HuggingFaceTB/SmolVLM-500M-Instruct' },
     });
 });

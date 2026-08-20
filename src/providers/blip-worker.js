@@ -31,7 +31,7 @@ import { DEFAULT_CAPTION_PROMPT, resolveCaptionTask } from './caption-task.js';
  * on the Hub now — hence the family plumbing rather than a swap of model id.
  */
 
-const MODEL = process.env.CANVAS_BLIP_MODEL || 'Xenova/vit-gpt2-image-captioning';
+const MODEL = process.env.CANVAS_BLIP_MODEL || 'HuggingFaceTB/SmolVLM-500M-Instruct';
 const DTYPE = process.env.CANVAS_BLIP_DTYPE || 'q8';
 const THREADS = Math.max(1, Number(process.env.CANVAS_INFERD_THREADS) || Math.min(4, os.cpus().length || 4));
 const MAX_NEW_TOKENS = Math.max(16, Number(process.env.CANVAS_BLIP_MAX_TOKENS) || 96);

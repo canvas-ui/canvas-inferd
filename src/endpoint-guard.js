@@ -113,7 +113,12 @@ export async function checkEndpoint(rawUrl, policy = {}) {
     return { ok: true, url };
 }
 
-/** Which option each provider type actually fetches. Local types fetch nothing. */
+/**
+ * Which option each provider type actually fetches. Local types fetch nothing.
+ * `ollama` is the legacy type (config.js aliases it onto openai); it is kept
+ * here so a stored config is still guarded on the field it was written with,
+ * before normalization rewrites it.
+ */
 const URL_FIELD = { openai: 'baseUrl', ollama: 'host' };
 
 /**

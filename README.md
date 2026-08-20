@@ -8,8 +8,11 @@ Raw media and model runtimes never enter SynapsD.
 
 ## Current capabilities
 
-- Text embeddings through local ONNX/fastembed, Ollama, and OpenAI-compatible
-  providers.
+- Text embeddings through local ONNX/fastembed or any OpenAI-compatible
+  endpoint. Ollama, vLLM, TEI, infinity, LM Studio and OpenAI all speak the same
+  embeddings dialect, so they share one `openai` provider type; `ollama` and
+  `vllm` exist as built-in provider *ids* pre-pointed at their default loopback
+  ports (`:11434/v1`, `:8000/v1`).
 - Joint text/image embeddings through a forked CLIP/SigLIP worker or an
   OpenAI-compatible endpoint.
 - Four-layer configuration: built-in defaults, server, user, then workspace.
@@ -19,7 +22,7 @@ Raw media and model runtimes never enter SynapsD.
   bitmap ledgers.
 - Ephemeral text and image query embeddings. Query inputs are never indexed.
 - Optional image captions via a forked Transformers.js worker (`blip` provider,
-  default `Xenova/vit-gpt2-image-captioning`). Disabled until
+  default `HuggingFaceTB/SmolVLM-500M-Instruct`). Disabled until
   `summarize.image.enabled` is set; `describeImage(wsId, bytes)` returns text
   only — Canvas Server persists `metadata.summary`. `summarize.image.task`
   (`caption` | `instruct` | `florence2`) selects how the worker drives the
@@ -31,10 +34,17 @@ Raw media and model runtimes never enter SynapsD.
 
 The built-in spaces are:
 
-| Space | Model | Dimensions |
-|---|---|---:|
-| `text` | `bge-small-en-v1.5` | 384 |
-| `image` | `Xenova/clip-vit-base-patch32` | 512 |
+| Space | Model | Dimensions | Provider |
+|---|---|---:|---|
+| `text` | `bge-small-en-v1.5` | 384 | `onnx` |
+| `image` | `Xenova/clip-vit-base-patch32` | 512 | `clip` |
+
+Image summarisation defaults to `HuggingFaceTB/SmolVLM-500M-Instruct` on the
+`blip` provider (disabled until enabled).
+
+Provider types are `onnx`, `clip`, `blip` (local, in-process) and `openai`
+(every remote backend). A stored `{ type: 'ollama', host }` from an older
+version still loads: it is rewritten to the `openai` provider against that host.
 
 Providers implement:
 

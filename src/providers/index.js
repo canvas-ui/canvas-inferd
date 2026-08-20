@@ -1,7 +1,6 @@
 'use strict';
 
 import OnnxProvider from './onnx.js';
-import OllamaProvider from './ollama.js';
 import ClipProvider from './clip.js';
 import BlipProvider from './blip.js';
 import OpenAIProvider from './openai.js';
@@ -10,6 +9,11 @@ import OpenAIProvider from './openai.js';
  * Provider factory — turns a normalized config entry (`{ type, ...opts }`) into
  * a provider instance. Adding a backend is a line here plus the class; the
  * routing table that uses it is pure config (see config.js).
+ *
+ * There is exactly one REMOTE implementation. Ollama, vLLM, TEI, infinity and
+ * OpenAI all speak the same embeddings dialect, so they are provider ids
+ * differing only by base URL — not four classes. (config.js aliases the legacy
+ * `ollama` type onto this one, so old configs still load.)
  *
  * Every provider honours the same contract:
  *   embedText(texts, rule)          → { vectors, dim }
@@ -20,7 +24,6 @@ import OpenAIProvider from './openai.js';
  */
 const FACTORIES = {
     onnx: (id, o) => new OnnxProvider({ ...o, id }),
-    ollama: (id, o) => new OllamaProvider({ ...o, id }),
     clip: (id, o) => new ClipProvider({ ...o, id }),
     blip: (id, o) => new BlipProvider({ ...o, id }),
     openai: (id, o) => new OpenAIProvider({ ...o, id }),

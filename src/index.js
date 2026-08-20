@@ -80,7 +80,8 @@ export default class Inferd {
      * @param {Array}  [options.rules]     routing rules
      * @param {string} [options.onnxCacheDir]
      * @param {string} [options.clipCacheDir]
-     * @param {string} [options.ollamaHost]
+     * @param {string} [options.ollamaHost]   base URL for the built-in `ollama` preset
+     * @param {string} [options.vllmBaseUrl] base URL for the built-in `vllm` preset
      * @param {number} [options.concurrency] max batches in flight across all queues
      * @param {(userId:string)=>Promise<object|null>} [options.resolveUserConfig]
      *        per-user overrides. Omitted → every user gets the server config.

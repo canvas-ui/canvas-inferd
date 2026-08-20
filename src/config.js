@@ -9,7 +9,8 @@ import { CAPTION_TASKS as CAPTION_TASK_NAMES } from './providers/caption-task.js
  * Three parts, deliberately separated by who owns them:
  *
  *   providers{} — connection details for an inference backend (`{ type, ...opts }`
- *                 under a caller-chosen id). Built-ins `onnx`/`ollama`/`clip`/`blip`
+ *                 under a caller-chosen id). Built-ins `onnx`/`clip`/`blip` (local, in-process)
+ *                 and `ollama`/`vllm` (OpenAI-compatible, loopback presets)
  *                 always exist; re-declaring an id merges over its options.
  *   spaces{}    — which provider+model fills each modality. THE configurable
  *                 surface: server defaults, overridable per user.
@@ -20,6 +21,7 @@ import { CAPTION_TASKS as CAPTION_TASK_NAMES } from './providers/caption-task.js
  * ```json
  * {
  *   "providers": { "gpu": { "type": "openai", "baseUrl": "http://gpu.local:8000/v1" } },
+ *   // ...or just reference the built-in `ollama` / `vllm` preset by id.
  *   "spaces": {
  *     "text":  { "provider": "gpu", "model": "Qwen/Qwen3-Embedding-0.6B", "dim": 1024, "chunk": true },
  *     "image": { "provider": "clip", "model": "Xenova/siglip-base-patch16-224", "dim": 768 }
@@ -32,8 +34,36 @@ import { CAPTION_TASKS as CAPTION_TASK_NAMES } from './providers/caption-task.js
  * optional, so nothing throws unless someone actually wrote config.
  */
 
-/** Provider implementations the factory knows how to build. */
-export const PROVIDER_TYPES = new Set(['onnx', 'ollama', 'clip', 'blip', 'openai']);
+/**
+ * Provider implementations the factory knows how to build.
+ *
+ * Every remote backend worth pointing inferd at speaks the OpenAI embeddings
+ * dialect — Ollama, vLLM, TEI, infinity, LM Studio and OpenAI itself — so there
+ * is ONE remote implementation (`openai`) and the differences between them are
+ * data: a base URL, and how images are spelled. `ollama` and `vllm` are
+ * therefore built-in provider IDS (see builtinProviders) rather than types.
+ */
+export const PROVIDER_TYPES = new Set(['onnx', 'clip', 'blip', 'openai']);
+
+/**
+ * Types that are no longer implementations but must keep loading. `ollama` was
+ * its own class speaking Ollama's native /api/embed; it now resolves to the
+ * openai provider against Ollama's OpenAI-compatible surface. A stored config
+ * saying `{ type: 'ollama', host }` keeps working — the host becomes the base
+ * URL, and OpenAIProvider appends /v1 to it.
+ */
+export const LEGACY_PROVIDER_TYPES = { ollama: 'openai' };
+
+/**
+ * Rewrite a legacy spec to its modern equivalent BEFORE it merges over a
+ * built-in's defaults — otherwise an explicitly configured `host` would lose to
+ * the preset `baseUrl` it is supposed to replace.
+ */
+function aliasLegacyProvider(raw) {
+    if (!raw || LEGACY_PROVIDER_TYPES[raw.type] === undefined) { return raw; }
+    const { host, type, ...rest } = raw;
+    return { ...rest, type: LEGACY_PROVIDER_TYPES[type], ...(host ? { baseUrl: host } : {}) };
+}
 
 /** Keys that describe a space's BACKEND rather than its routing. */
 const SPACE_KEYS = ['provider', 'model', 'dim', 'chunk', 'maxLength', 'dimensions', 'annIndex'];
@@ -43,12 +73,26 @@ const SPACE_KEYS = ['provider', 'model', 'dim', 'chunk', 'maxLength', 'dimension
  * top-level server settings (cache dirs, ollama host) unless the config
  * overrides them by re-declaring the same id.
  */
-export function builtinProviders({ onnxCacheDir = null, clipCacheDir = null, ollamaHost = null } = {}) {
+export const PRESET_BASE_URLS = {
+    ollama: 'http://127.0.0.1:11434/v1',
+    vllm: 'http://127.0.0.1:8000/v1',
+    openai: 'https://api.openai.com/v1',
+};
+
+export function builtinProviders({ onnxCacheDir = null, clipCacheDir = null, ollamaHost = null, vllmBaseUrl = null } = {}) {
     return {
         onnx: { type: 'onnx', cacheDir: onnxCacheDir },
-        ollama: { type: 'ollama', host: ollamaHost },
         clip: { type: 'clip', cacheDir: clipCacheDir || onnxCacheDir },
         blip: { type: 'blip', cacheDir: clipCacheDir || onnxCacheDir },
+        // Named presets over the single OpenAI-compatible implementation, both
+        // pointing at the port their daemon listens on by default — so "use my
+        // local Ollama" is a space referencing `ollama`, with nothing to declare.
+        // Deliberately loopback-only: a preset for a hosted API would be an
+        // unconfigured provider the admin status view pings on every poll.
+        // OpenAI itself is reached by declaring a provider of type `openai`,
+        // which is where the API key gets typed anyway.
+        ollama: { type: 'openai', baseUrl: ollamaHost || PRESET_BASE_URLS.ollama },
+        vllm: { type: 'openai', baseUrl: vllmBaseUrl || PRESET_BASE_URLS.vllm },
     };
 }
 
@@ -81,12 +125,13 @@ function normalizeProviders(declared, defaults) {
     if (typeof declared !== 'object' || Array.isArray(declared)) {
         throw new Error('inferd config: `providers` must be an object keyed by provider id');
     }
-    for (const [id, raw] of Object.entries(declared)) {
-        if (!raw || typeof raw !== 'object') {
+    for (const [id, rawDeclared] of Object.entries(declared)) {
+        if (!rawDeclared || typeof rawDeclared !== 'object') {
             throw new Error(`inferd config: provider '${id}' must be an object`);
         }
+        const raw = aliasLegacyProvider(rawDeclared);
         // Re-declaring a built-in id merges over its defaults, so overriding just
-        // `host` on `ollama` doesn't drop the rest.
+        // `baseUrl` on `ollama` doesn't drop the rest.
         const base = out[id] || {};
         const type = raw.type || base.type;
         if (!type) { throw new Error(`inferd config: provider '${id}' has no \`type\``); }
@@ -151,7 +196,17 @@ const SUMMARIZE_MODALITIES = new Set(['image', 'audio', 'text']);
 // provider. Defined next to the worker that implements each one.
 const CAPTION_TASKS = new Set(CAPTION_TASK_NAMES);
 const DEFAULT_SUMMARIZE = {
-    image: { enabled: false, provider: 'blip', model: 'Xenova/vit-gpt2-image-captioning' },
+    // SmolVLM-500M-Instruct is the runtime default captioner: an instruct VLM,
+    // so the description is steerable (DEFAULT_CAPTION_PROMPT) instead of the
+    // one terse, repetition-prone sentence vit-gpt2 produced. Still disabled
+    // until a workspace opts in — captioning is expensive, not free.
+    // `task` and `prompt` are deliberately NOT set here. This object merges
+    // key-wise into whatever a workspace saves, so a sticky `task: 'instruct'`
+    // would follow a user who switches to a plain captioner and build the wrong
+    // pipeline. Both already have correct fallbacks downstream:
+    // resolveCaptionTask() reads 'instruct' off the model id, and the worker
+    // falls back to DEFAULT_CAPTION_PROMPT.
+    image: { enabled: false, provider: 'blip', model: 'HuggingFaceTB/SmolVLM-500M-Instruct' },
 };
 
 function normalizeSummarize(raw, providerIds) {
@@ -295,4 +350,4 @@ export function redactConfig(config) {
     return { ...config, providers };
 }
 
-export default { normalizeConfig, mergeConfigLayers, redactConfig, toMatcher, builtinProviders, PROVIDER_TYPES };
+export default { normalizeConfig, mergeConfigLayers, redactConfig, toMatcher, builtinProviders, PROVIDER_TYPES, PRESET_BASE_URLS, LEGACY_PROVIDER_TYPES };

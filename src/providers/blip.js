@@ -10,7 +10,9 @@ import { describeWorkerExit, logWorkerExit, workerDeadError } from './worker-exi
 const debug = debugInstance('canvas:inferd:blip');
 
 const WORKER_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'blip-worker.js');
-const DEFAULT_MODEL = 'Xenova/vit-gpt2-image-captioning';
+// Matches config.DEFAULT_SUMMARIZE — the fallback when a caller passes no
+// model at all must be the same model the config layer defaults to.
+const DEFAULT_MODEL = 'HuggingFaceTB/SmolVLM-500M-Instruct';
 
 export default class BlipProvider {
     id = 'blip';
