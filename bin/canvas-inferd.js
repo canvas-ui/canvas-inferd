@@ -12,9 +12,8 @@
  */
 
 import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import { InferdDaemon } from '../src/daemon.js';
+import { defaultSocketPath } from '../src/socket-path.js';
 
 function parseArgs(argv) {
     const args = {};
@@ -34,8 +33,12 @@ const args = parseArgs(process.argv);
 if (args.help) {
     process.stdout.write(`canvas-inferd — inference daemon
 
-  --socket <path>   unix socket to listen on
-                    (default: $CANVAS_INFERD_SOCKET, else <tmp>/canvas-inferd.sock)
+  --socket <path>   unix socket to listen on. Default, in order:
+                      $CANVAS_INFERD_SOCKET
+                      $XDG_RUNTIME_DIR/canvas/inferd.sock
+                      /run/canvas/inferd.sock
+                    canvas-server resolves the SAME rule, so with nothing set
+                    the pair still finds each other.
   --config <path>   JSON config file (providers, spaces, rules, summarize)
   --cache-dir <p>   model cache directory (default: $CANVAS_INFERD_CACHE_DIR)
   --help            this text
@@ -43,9 +46,7 @@ if (args.help) {
     process.exit(0);
 }
 
-const socketPath = args.socket
-    || process.env.CANVAS_INFERD_SOCKET
-    || path.join(os.tmpdir(), 'canvas-inferd.sock');
+const socketPath = args.socket || defaultSocketPath();
 
 let fileConfig = {};
 const configPath = args.config || process.env.CANVAS_INFERD_CONFIG;
