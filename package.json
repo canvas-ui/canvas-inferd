@@ -1,6 +1,6 @@
 {
   "name": "canvas-inferd",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "Canvas inference service: embeddings today (ONNX/CLIP/Ollama/OpenAI-compatible providers, per-user/workspace config, SSRF endpoint guard), describe/extract capabilities next",
   "main": "./src/index.js",
   "type": "module",
@@ -13,7 +13,7 @@
     "@huggingface/transformers": "^4.2.0",
     "debug": "^4.4.3",
     "fastembed": "^2.1.0",
-    "onnxruntime-node": "^1.21.0"
+    "onnxruntime-node": "1.21.0"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -21,5 +21,16 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/canvas-ui/canvas-inferd.git"
+  },
+  "bin": {
+    "canvas-inferd": "./bin/canvas-inferd.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./daemon": "./src/daemon.js",
+    "./rpc/peer": "./src/rpc/peer.js",
+    "./rpc/codec": "./src/rpc/codec.js",
+    "./package.json": "./package.json",
+    "./*": "./*"
   }
 }

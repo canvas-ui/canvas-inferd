@@ -115,3 +115,24 @@ latest main on every deployment update.
 npm install
 npm test
 ```
+
+## The onnxruntime-node pin
+
+`onnxruntime-node` is pinned to an EXACT `1.21.0`, not `^1.21.0`.
+
+fastembed (the text embedder) builds against 1.21.0; transformers.js (CLIP,
+vision) builds against 1.24.3. Both load `libonnxruntime.so.1` as a process
+global, and the two are not ABI-compatible — whichever version npm hoists to
+this package's root is the one every native binding in the main process links
+against. A caret range floats the root to the newest release, and fastembed's
+binding then dies with:
+
+    libonnxruntime.so.1: version `VERS_1.21.0' not found
+
+Pinning the root to 1.21.0 keeps fastembed and the main process on one version
+and leaves transformers' 1.24.3 nested, loaded only inside the isolated CLIP
+child process (see src/providers/clip-worker.js — that child exists for exactly
+this reason).
+
+Do not relax this to a range without moving fastembed out of the main process
+too.
