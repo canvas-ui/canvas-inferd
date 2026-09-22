@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import debugInstance from 'debug';
 import Inferd from './index.js';
+import { testProvider } from './test-provider.js';
 import { redactConfig } from './config.js';
 import { checkConfigEndpoints, checkEndpoint, endpointFor } from './endpoint-guard.js';
 import { RpcPeer } from './rpc/peer.js';
@@ -216,6 +217,12 @@ export class InferdDaemon {
             // instances). Only its config and routing rules are readable data,
             // so that is all that crosses — the rest cannot be serialised and
             // has no meaning in another process.
+            'inferd.contextFor': async (userId) => {
+                const ctx = await inferd.contextFor(userId);
+                return { config: ctx.config, ...(ctx.invalid ? { invalid: ctx.invalid } : {}) };
+            },
+            'inferd.workspacesOf': (userId) => inferd.workspacesOf(userId),
+            'inferd.testProvider': (provider, opts) => testProvider(inferd, provider, opts),
             'inferd.contextForWorkspace': async (wsId) => {
                 const ctx = await inferd.contextForWorkspace(wsId);
                 return { config: ctx.config, router: { rules: ctx.router?.rules || [] } };
@@ -232,7 +239,7 @@ export class InferdDaemon {
             // Pure helpers the API routes need. They live here so canvas-server
             // needs no inferd import at all — the whole point of the split.
             'inferd.redactConfig': (config) => redactConfig(config),
-            'inferd.checkConfigEndpoints': (config) => checkConfigEndpoints(config),
+            'inferd.checkConfigEndpoints': (config, opts) => checkConfigEndpoints(config, opts),
             'inferd.checkEndpoint': (url, opts) => checkEndpoint(url, opts),
             'inferd.endpointFor': (spec) => endpointFor(spec),
         };
