@@ -34,6 +34,8 @@ export class InferdDaemon {
     #server = null;
     #inferd;
     #peers = new Set();
+    // Peers that answer server.resolveUserConfig (the hub; never a workspace child).
+    #userConfigPeers = new Set();
     // wsId -> the peer that registered it, so a workspace callback goes back to
     // the process that actually holds that workspace.
     #workspacePeers = new Map();
@@ -106,6 +108,7 @@ export class InferdDaemon {
     // never resolve its input.
     #onPeerGone(peer) {
         this.#peers.delete(peer);
+        this.#userConfigPeers.delete(peer);
         for (const [wsId, owner] of [...this.#workspacePeers]) {
             if (owner !== peer) { continue; }
             this.#workspacePeers.delete(wsId);
@@ -116,10 +119,9 @@ export class InferdDaemon {
     }
 
     #resolveUserConfig(userId) {
-        // User config is not workspace-scoped, so it goes to any live client.
-        // In practice one canvas-server owns a daemon; if several ever share
-        // one, per-user config would need routing of its own.
-        const [peer] = this.#peers;
+        // User config lives with the hub. Workspace children connect too, but
+        // only a peer that declared inferd.provideUserConfig is asked.
+        const [peer] = this.#userConfigPeers;
         if (!peer) { return null; }
         return peer.call('server.resolveUserConfig', [userId]);
     }
@@ -163,6 +165,7 @@ export class InferdDaemon {
         const inferd = this.#inferd;
         return {
             'inferd.ping': () => ({ ok: true, pid: process.pid }),
+            'inferd.provideUserConfig': () => { this.#userConfigPeers.add(peer); return true; },
 
             // ── Workspace registration ──────────────────────────────────────
             'inferd.registerWorkspace': (wsId, opts = {}) => {

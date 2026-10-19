@@ -19,6 +19,7 @@ test('settings RPC supports user inheritance, provider tests and endpoint polici
     const peer = new RpcPeer(socket);
     t.after(() => peer.destroy());
     peer.handleAll({ 'server.resolveUserConfig': async () => ({ spaces: { text: { model: 'user-model' } } }) });
+    await peer.call('inferd.provideUserConfig', []);
     const ctx = await peer.call('inferd.contextFor', ['alice']);
     assert.equal(ctx.config.spaces.text.model, 'user-model');
     assert.equal(ctx.providers, undefined);
