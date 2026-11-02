@@ -39,7 +39,7 @@ export class ImageSummaryRun {
 
     /**
      * @param {string} wsId
-     * @param {object} adapter        the workspace seam (imageDocumentIds, resolveInput, setSummary)
+     * @param {object} adapter        the workspace seam (imageDocumentIds(scope), resolveInput, setSummary)
      * @param {Function} describe     (bytes, { contentType }) => Promise<string>
      */
     constructor(wsId, adapter, describe) {
@@ -55,14 +55,20 @@ export class ImageSummaryRun {
         return { ...this.#status, errors: this.#status.errors ? [...this.#status.errors] : undefined };
     }
 
-    async start({ force = false } = {}) {
+    /**
+     * @param {object} [opts]
+     * @param {boolean} [opts.force]   re-caption images that already have a summary
+     * @param {string|null} [opts.scope]  `ctx://…` / `dir://…`: only images under that path
+     */
+    async start({ force = false, scope = null } = {}) {
         if (this.#status.running) {
             return { started: false, error: 'Image summary generation is already running', status: this.status };
         }
 
-        const ids = await this.#adapter.imageDocumentIds();
+        const ids = await this.#adapter.imageDocumentIds(scope || null);
         this.#status = {
             running: true, total: ids.length, described: 0, skipped: 0, failed: 0,
+            ...(scope ? { scope } : {}),
             startedAt: new Date().toISOString(),
         };
         this.#cancelled = false;

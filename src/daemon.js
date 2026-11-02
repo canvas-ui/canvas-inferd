@@ -138,7 +138,7 @@ export class InferdDaemon {
             onQueueDrained: () => peer.call('ws.onQueueDrained', [wsId]),
             // Used by the captioning run: which documents are images, and where
             // a caption goes. Both are facts only the server holds.
-            imageDocumentIds: () => peer.call('ws.imageDocumentIds', [wsId]),
+            imageDocumentIds: (scope) => peer.call('ws.imageDocumentIds', [wsId, scope ?? null]),
             setSummary: (docId, text) => peer.call('ws.setSummary', [wsId, docId, text]),
         };
     }
